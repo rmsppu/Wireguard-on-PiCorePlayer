@@ -6,10 +6,18 @@ This was inspired by:
   2. the need to bring the wireguard-tools into picoreplayer version > 8
 
 # Installation
-The store the file `S99-wireguard` in the default user's home directory as:
+## Store [the file `S99-wireguard`](https://raw.githubusercontent.com/rmsppu/Wireguard-on-PiCorePlayer/refs/heads/main/S99-wireguard) in the default user's home directory as:
 ```/home/tc/S99-wireguard```
 
-# Execute at Boot
+## Login  to the PCP server via `ssh` as the user `tc`
+
+## Ensure `S99-wireguard` is executable with:
+```chmod +x /home/tc/S99-wireguard```
+
+## Backup the change to PCP
+```pcp bu```
+
+## Execute S99-wireguard at Boot
 The file must be executed each time the PCP server boot. This can be done easily by adding `/home/tc/S99-wireguard` as user command via the PCP web gui, through:
 >go to the **Tweaks** tab
 >
