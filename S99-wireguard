@@ -1,0 +1,159 @@
+#/bin/sh
+
+#========================================================================================
+# Wireguard installation & initialization
+#
+# tested under PCP v11.0
+#
+#	Dec 26 09:40:25 PM EST 2025
+#----------------------------------------------------------------------------------------
+
+cd /home/tc
+DEV=wg0
+
+## Change as needed:
+myIP="10.140.68.100/24"
+
+
+
+########################################################################################
+cat << E-O-CAT > /tmp/${DEV}.conf
+[Interface]
+ListenPort = 40962
+## ChangeMe ##
+PrivateKey = WireguardPrivateKey_for_this_PCP_server--ChangeMe
+
+[Peer]
+# human-readable name of Wireguard peer (ie., VPN client)
+## ChangeMe ##
+PublicKey = PublicKey_for_peer--ChangeMe
+## ChangeAsNeeded
+AllowedIPs = 10.140.68.2/32
+
+### Add more VPN clients with additional "Peer" definitions as above, each with a unique
+### PublicKey and AllowedIP
+E-O-CAT
+########################################################################################
+
+
+# No further configuration needed #
+
+case $1 in
+	start)
+		egrep "^PublicKey|^PrivateKey" /tmp/${DEV}.conf | grep -q ChangeMe
+		if [ $? = 0 ] ; then
+			echo "The wireguard configuration file needs to be updated with definitions for the Wireguard server (Interface section) and each VPN client (Peer sections)" 1>&2
+			echo "Edit the file: " 1>&2
+			echo "       $0" 1>&2
+			echo "to update lines that follow the comment \"ChangeMe\"" 1>&2
+			rm -f /tmp/${DEV}.conf
+			exit 1
+		fi
+
+		lsmod |grep -q "^wireguard"
+		if [ $? = 0 ] ; then
+			echo "$(date): wireguard kernel module already loaded...exiting" 1>&2
+			exit 1
+		fi
+
+		echo "$(date): Starting wireguard" 1>&2	
+
+		# Make sure dependencies are installed, as the user tc
+		for ext in bash iproute2 coreutils wireguard-$(uname -r)
+		do
+			sudo -u tc tce-load -iw ${ext} 1> /dev/null
+			if [ $? != 0 ] ; then
+				echo "$0 $(date): error loading the extension \"${ext}\"" 1>&2
+				exit 1
+			fi
+		done
+		
+		which wg 1> /dev/null
+		if [ $? != 0 ] ; then
+			echo "$0 $(date): wg command from the wireguard-tools not found, trying to install the extension" 1>&2
+			# wg doesn't exist... try to load the wireguard-tools extension...which may not be in the current repo
+			sudo -u tc tce-load -iw wireguard-tools 1>&2 2> /dev/null
+			if [ $? != 0 ] ; then
+				echo "$0 $(date): error loading the wireguard-tools extension from the default repo...trying to wget an older version" 1>&2
+				wget -nd https://repo.picoreplayer.org/repo/13.x/armv7/tcz/wireguard-tools.tcz
+				if [ $? != 0 ] ; then
+					echo "$0 $(date): error downloading https://repo.picoreplayer.org/repo/13.x/armv7/tcz/wireguard-tools.tcz" 1>&2
+					exit 1
+				fi
+				sudo -u tc tce-load -i ./wireguard-tools.tcz	
+				if [ $? != 0 ] ; then
+					echo "$0 $(date): error installing /home/tc/wireguard-tools.tcz" 1>&2
+					exit 1
+				fi
+			fi
+		fi
+
+		modprobe wireguard
+		if [ $? != 0 ] ; then
+			echo "$0 $(date): error running \"modprobe wireguard\"" 1>&2
+			exit 1
+		fi
+
+		ip link add dev ${DEV} type wireguard
+		if [ $? != 0 ] ; then
+			echo "$0 $(date): error running \"ip link add dev ${DEV} type wireguard\"" 1>&2
+			exit 1
+		fi
+
+		wg setconf ${DEV} /tmp/${DEV}.conf
+		if [ $? != 0 ] ; then
+			echo "$0 $(date): error running \"wg syncconf ${DEV} /tmp/${DEV}.conf\"" 1>&2
+			exit 1
+		fi
+		
+		ip address add dev ${DEV} ${myIP}
+		if [ $? != 0 ] ; then
+			echo "$0 $(date): error running \"ip address add dev ${DEV} ${myIP}\"" 1>&2
+			exit 1
+		fi
+
+		ip link set up dev ${DEV}
+		if [ $? != 0 ] ; then
+			echo "$0 $(date): error running \"ip link set up dev ${DEV}\"" 1>&2
+			exit 1
+		fi
+
+		echo "$(date): started" 1>&2
+
+		;;
+	stop)
+		lsmod |grep -q "^wireguard"
+		if [ $? = 1 ] ; then
+			echo "$(date): wireguard kernel module not loaded...exiting" 1>&2
+			exit 1
+		fi
+
+		echo "$(date): Stopping wireguard" 1>&2	
+		rm -f /tmp/${DEV}.conf
+		# remove the current peers from the running config
+		wg show|sed -n -e "s/^peer: \(.*\)/wg set ${DEV} peer \1 remove/p" | sh
+		ip link set up dev ${DEV}
+		ip address del dev ${DEV} ${myIP}
+		ip link del dev ${DEV} type wireguard
+		modprobe -r wireguard
+
+		echo "$(date): Stopped wireguard" 1>&2	
+		;;
+
+	status)
+		echo "$(date): wireguard status" 1>&2	
+
+		lsmod |grep -q "^wireguard"
+		if [ $? = 1 ] ; then
+			echo "         wireguard kernel module not loaded" 1>&2
+			exit 1
+		else
+			wg show
+		fi
+		;;
+
+	*)
+		echo "$(date): Unrecognized option: \"$1\"" 1>&2
+		exit 1
+		;;
+esac
