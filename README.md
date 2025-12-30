@@ -20,3 +20,6 @@ The file must be executed each time the PCP server boot. This can be done easily
 >>`/home/tc/S99-wireguard`
 >>
 >as one of the three commands
+
+# To Do
+Stop pulling `wireguard-tools` from an older picorelayer repo. Either request that the tools be included with current repos, or build the package following [these commands](http://tinycorelinux.net/11.x/x86_64/tcz/src/wireguard/compile_wireguard-tools) and make the binaries available from this repo.
