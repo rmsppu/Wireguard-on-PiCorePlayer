@@ -29,5 +29,18 @@ The file must be executed each time the PCP server boot. This can be done easily
 >>
 >as one of the three commands
 
+# Usage
+The `S99-wireguard` command must be run as root, typically after logging in as the default user (tc) with:
+```sudo /home/tc/S99-wireguard```
+
+## Arguments
+The `S99-wireguard` command requires one of the options:
+
+**start** start the Wireguard daemon, installing the kernel module and wireguard-tools extension (and dependencies) if needed
+
+**stop** stop the Wireguard daemon, shutdown the `wg0` network interface, remove the configuration file
+
+**status** run the `wg show` command to report on the service status
+
 # To Do
 Stop pulling `wireguard-tools` from an older picorelayer repo. Either request that the tools be included with current repos, or build the package following [these commands](http://tinycorelinux.net/11.x/x86_64/tcz/src/wireguard/compile_wireguard-tools) and make the binaries available from this repo.
