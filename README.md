@@ -18,7 +18,7 @@ This was inspired by:
 ```pcp bu```
 
 ## Execute S99-wireguard at Boot
-The file must be executed each time the PCP server boot. This can be done easily by adding `/home/tc/S99-wireguard` as user command via the PCP web gui, through:
+The file must be executed each time the PCP server boots. This can be done easily by adding `/home/tc/S99-wireguard` as user command via the PCP web gui, through:
 >go to the **Tweaks** tab
 >
 >scroll down to the **User commands** section
